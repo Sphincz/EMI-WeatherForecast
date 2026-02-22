@@ -1,0 +1,19 @@
+name: emi-weather-forecasting
+services:
+  mlflow_server:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: emi-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=sqlite:////mlflow/mlflow.db
+      - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
+    volumes:
+      - ./mlflow_data:/mlflow
+    command: >
+      mlflow server
+        --backend-store-uri sqlite:////mlflow/mlflow.db
+        --default-artifact-root mlflow-artifacts:/
+        --artifacts-destination /mlflow/artifacts
+        --serve-artifacts
+        --host 0.0.0.0
