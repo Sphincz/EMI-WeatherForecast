@@ -1,0 +1,8 @@
+# This tells Hydra to load the default configurations from our sub-folders
+defaults:
+  - paths: default
+  - api: openmeteo
+  - tracking: mlflow
+  - _self_
+
+project_name: "EMI-WeatherForecast"

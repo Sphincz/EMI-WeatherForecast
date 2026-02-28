@@ -4,31 +4,30 @@ import requests_cache
 from retry_requests import retry
 from datetime import datetime
 import os
+import hydra
+from omegaconf import DictConfig, OmegaConf
 
 
-def fetch_weather_data():
-    # Setup API client with cache to avoid redundant calls
+# The decorator tells Hydra where to find the config files
+# config_path is relative to the location of this python script
+@hydra.main(version_base=None, config_path="../../conf", config_name="config")
+def fetch_weather_data(cfg: DictConfig):
+    print(f"Starting ingestion for project: {cfg.project_name}")
+
     cache_session = requests_cache.CachedSession('.cache', expire_after=-1)
     retry_session = retry(cache_session, retries=5, backoff_factor=0.2)
     openmeteo = openmeteo_requests.Client(session=retry_session)
 
-    # API Parameters for the Weather Forecast Project
     url = "https://archive-api.open-meteo.com/v1/archive"
-    params = {
-        "latitude": 38.801,  # Sintra, Portugal
-        "longitude": -9.3783,
-        "start_date": "2026-02-06",
-        "end_date": "2026-02-20",
-        "hourly": ["temperature_2m", "relative_humidity_2m", "precipitation"],
-        "timezone": "auto",
-    }
 
-    print(f"Requesting weather data from Open-Meteo...")
+    # Convert the Hydra DictConfig into a standard Python dictionary for the API
+    params = OmegaConf.to_container(cfg.api.params, resolve=True)
+
+    print(f"Requesting data for coordinates: {params['latitude']}N, {params['longitude']}E")
     responses = openmeteo.weather_api(url, params=params)
-    response = responses[0]  # Assuming we only have one response for the given parameters
-
-    # Process hourly data into a dictionary
+    response = responses[0]
     hourly = response.Hourly()
+
     hourly_data = {
         "date": pd.date_range(
             start=pd.to_datetime(hourly.Time() + response.UtcOffsetSeconds(), unit="s", utc=True),
@@ -43,14 +42,16 @@ def fetch_weather_data():
 
     df = pd.DataFrame(data=hourly_data)
 
-    # Generate timestamped filename for automatic capturing
+    # Use the path defined in conf/paths/default.yaml
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"weather_{timestamp}.csv"
-    os.makedirs("data/raw", exist_ok=True)
-    output_path = os.path.join("data/raw", filename)
+
+    # Ensure the directory exists
+    os.makedirs(cfg.paths.raw_data_dir, exist_ok=True)
+    output_path = os.path.join(cfg.paths.raw_data_dir, filename)
 
     df.to_csv(output_path, index=False)
-    print(f"Data ingested and saved to: {output_path}")
+    print(f"Data successfully ingested: {output_path}")
 
 
 if __name__ == "__main__":

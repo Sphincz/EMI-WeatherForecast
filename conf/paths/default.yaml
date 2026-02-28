@@ -1,0 +1,3 @@
+# Configuration for file paths
+raw_data_dir: "data/raw" # Directory to store raw data fetched from the API
+processed_data_dir: "data/processed" # Directory to store processed data ready for modeling (used in later labs)

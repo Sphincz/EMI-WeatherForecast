@@ -1,0 +1,11 @@
+# Configuration for Open-Meteo API parameters
+params:
+  latitude: 38.801 # Porto, Portugal
+  longitude: -9.3783
+  start_date: "2026-02-06"
+  end_date: "2026-02-20"
+  hourly:
+    - "temperature_2m"
+    - "relative_humidity_2m"
+    - "precipitation"
+  timezone: "auto"
