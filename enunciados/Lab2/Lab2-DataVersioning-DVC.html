@@ -8156,34 +8156,70 @@ retry-requests<span class="o">==</span><span class="m">2</span>.0.0
 <div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">mlflow</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">dvc.api</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dvc.api</span><span class="w"> </span><span class="kn">import</span> <span class="n">DVCFileSystem</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">mlflow.data.filesystem_dataset_source</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileSystemDatasetSource</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">mlflow.data.pandas_dataset</span><span class="w"> </span><span class="kn">import</span> <span class="n">from_pandas</span>
 
 <span class="n">mlflow</span><span class="o">.</span><span class="n">set_tracking_uri</span><span class="p">(</span><span class="s2">"http://localhost:5000"</span><span class="p">)</span>
 <span class="n">mlflow</span><span class="o">.</span><span class="n">set_experiment</span><span class="p">(</span><span class="s2">"Lab2_DVC_Integration"</span><span class="p">)</span>
 
 
 <span class="k">def</span><span class="w"> </span><span class="nf">dvc_integration</span><span class="p">():</span>
-    <span class="c1"># Use the DVC API to get the internal URL/Hash of the tracked folder</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="c1"># get_url returns the path in the .dvc/cache (which is named by the MD5 hash)</span>
+        <span class="c1"># 1. Get the hash of the tracked folder (Current DVC state)</span>
         <span class="n">resource_url</span> <span class="o">=</span> <span class="n">dvc</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">get_url</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s1">'data/raw'</span><span class="p">,</span> <span class="n">repo</span><span class="o">=</span><span class="s1">'.'</span><span class="p">)</span>
         <span class="n">folder_hash</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">resource_url</span><span class="p">)</span>
+
+        <span class="c1"># 2. Connect to the DVC Virtual Filesystem at the last commit (HEAD)</span>
+        <span class="c1"># This completely ignores any uncommitted changes on your local hard drive</span>
+        <span class="n">fs</span> <span class="o">=</span> <span class="n">DVCFileSystem</span><span class="p">(</span><span class="n">url</span><span class="o">=</span><span class="s2">"."</span><span class="p">,</span> <span class="n">rev</span><span class="o">=</span><span class="s2">"HEAD"</span><span class="p">)</span>
+
+        <span class="c1"># 3. List ONLY the files that DVC is tracking at this exact commit</span>
+        <span class="n">tracked_files</span> <span class="o">=</span> <span class="n">fs</span><span class="o">.</span><span class="n">ls</span><span class="p">(</span><span class="s2">"data/raw"</span><span class="p">)</span>
+
+        <span class="n">csv_files</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">tracked_files</span><span class="p">:</span>
+            <span class="c1"># If DVC returns a dictionary, grab the 'name' key. Otherwise, use the string.</span>
+            <span class="n">file_path</span> <span class="o">=</span> <span class="n">f</span><span class="p">[</span><span class="s2">"name"</span><span class="p">]</span> <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">f</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="k">else</span> <span class="n">f</span>
+
+            <span class="k">if</span> <span class="n">file_path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">".csv"</span><span class="p">):</span>
+                <span class="n">csv_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">csv_files</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"No CSV files are currently tracked by DVC in data/raw."</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Grab the latest file FROM THE TRACKED LIST</span>
+        <span class="n">latest_tracked_file</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">csv_files</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">csv_files</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">"No CSV files are currently tracked by DVC in data/raw."</span><span class="p">)</span>
+            <span class="k">return</span>
+
+        <span class="c1"># Grab the latest file FROM THE TRACKED LIST</span>
+        <span class="n">latest_tracked_file</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">csv_files</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="c1"># 4. Read the file directly from the DVC cache using fs.open()</span>
+        <span class="k">with</span> <span class="n">fs</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">latest_tracked_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+        <span class="c1"># 5. Create a Dataset object and log it to MLflow (for traceability)</span>
+        <span class="n">fs_dataset_source</span> <span class="o">=</span> <span class="n">FileSystemDatasetSource</span><span class="p">()</span>
+        <span class="n">dataset</span> <span class="o">=</span> <span class="n">from_pandas</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">source</span><span class="o">=</span><span class="n">fs_dataset_source</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">latest_tracked_file</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">"weather-sample"</span><span class="p">,</span> <span class="n">targets</span><span class="o">=</span><span class="s2">"temperature_2m"</span><span class="p">)</span>
 
     <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Error accessing DVC API: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
         <span class="k">return</span>
 
-    <span class="k">with</span> <span class="n">mlflow</span><span class="o">.</span><span class="n">start_run</span><span class="p">(</span><span class="n">run_name</span><span class="o">=</span><span class="s2">"Lab2_DVC_Versioning"</span><span class="p">)</span> <span class="k">as</span> <span class="n">run</span><span class="p">:</span>
-        <span class="c1"># Select the latest file for the current run</span>
-        <span class="n">files</span> <span class="o">=</span> <span class="p">[</span><span class="n">f</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="s2">"data/raw"</span><span class="p">)</span> <span class="k">if</span> <span class="n">f</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">".csv"</span><span class="p">)]</span>
-        <span class="n">latest_file</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">files</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-        <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">"data/raw"</span><span class="p">,</span> <span class="n">latest_file</span><span class="p">))</span>
-
+    <span class="k">with</span> <span class="n">mlflow</span><span class="o">.</span><span class="n">start_run</span><span class="p">(</span><span class="n">run_name</span><span class="o">=</span><span class="s2">"Lab2_DVC_Lineage"</span><span class="p">)</span> <span class="k">as</span> <span class="n">run</span><span class="p">:</span>
         <span class="c1"># Log the DVC Hash for Data Lineage</span>
         <span class="c1"># This provides a 1:1 link between this MLflow run and the DVC data state</span>
         <span class="n">mlflow</span><span class="o">.</span><span class="n">log_param</span><span class="p">(</span><span class="s2">"dvc_data_hash"</span><span class="p">,</span> <span class="n">folder_hash</span><span class="p">)</span>
-        <span class="n">mlflow</span><span class="o">.</span><span class="n">log_param</span><span class="p">(</span><span class="s2">"input_file"</span><span class="p">,</span> <span class="n">latest_file</span><span class="p">)</span>
+        <span class="n">mlflow</span><span class="o">.</span><span class="n">log_param</span><span class="p">(</span><span class="s2">"input_file"</span><span class="p">,</span> <span class="n">latest_tracked_file</span><span class="p">)</span>
+        <span class="n">mlflow</span><span class="o">.</span><span class="n">log_input</span><span class="p">(</span><span class="n">dataset</span><span class="p">,</span> <span class="n">context</span><span class="o">=</span><span class="s2">"training"</span><span class="p">)</span>
+        <span class="n">mlflow</span><span class="o">.</span><span class="n">log_artifact</span><span class="p">(</span><span class="n">latest_tracked_file</span><span class="p">,</span> <span class="n">artifact_path</span><span class="o">=</span><span class="s2">"last_tracked_file"</span><span class="p">)</span>
         <span class="n">mlflow</span><span class="o">.</span><span class="n">log_metric</span><span class="p">(</span><span class="s2">"row_count"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">))</span>
         <span class="n">mlflow</span><span class="o">.</span><span class="n">log_metric</span><span class="p">(</span><span class="s2">"average_temperature"</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="s2">"temperature_2m"</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
         <span class="n">mlflow</span><span class="o">.</span><span class="n">log_metric</span><span class="p">(</span><span class="s2">"average_relative_humidity"</span><span class="p">,</span> <span class="n">df</span><span class="p">[</span><span class="s2">"relative_humidity_2m"</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span>
@@ -8206,9 +8242,14 @@ retry-requests<span class="o">==</span><span class="m">2</span>.0.0
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<blockquote>
-<p><strong>NOTE</strong>: The use of <code>dvc.api.read</code> allows us to programmatically access the metadata of our tracked folder. By logging the <code>md5</code> hash to MLflow, we create a direct link between our experiment and the exact version of the data used. This is crucial for reproducibility, as it allows us to revert anytime to the specific state of the data that was used for that run, even if new files have been added since then.</p>
-</blockquote>
+<h5 id="Code-Explanation:">Code Explanation:<a class="anchor-link" href="#Code-Explanation:">¶</a></h5><ul>
+<li><code>dvc.api.get_url(path='data/raw', repo='.')</code>: This retrieves the URL of the tracked folder in DVC, which includes the unique hash representing the current state of that folder. By extracting the basename, we get the hash itself.</li>
+<li><code>DVCFileSystem(url=".", rev="HEAD")</code>: This creates a virtual filesystem that allows us to interact with the DVC-tracked files as if they were local, but it only shows the files that are part of the current Git commit (HEAD). This means that any uncommitted changes or new files that have not been added to DVC will be ignored, ensuring that we are always working with the exact version of the data that was used for this run.</li>
+<li><code>last_tracked_file = sorted(csv_files)[-1]</code>: This line ensures that we are reading the latest CSV file that DVC is tracking, which is crucial for maintaining the integrity of our experiments as new data arrives.</li>
+<li><code>mlflow.log_param("dvc_data_hash", folder_hash)</code>: By logging the DVC hash as a parameter in MLflow, we create a permanent record of the exact state of the data used for this run. This allows us to trace back and reproduce this run in the future by reverting our <code>data/raw</code> folder to this specific hash, ensuring that we can always access the same data state even as new files are added over time.</li>
+<li><code>mlflow.log_param("input_file", latest_tracked_file)</code>: This logs the specific file that was read for this run, providing additional context in the MLflow UI about which data was used.</li>
+<li><code>mlflow.log_input(dataset, context="training")</code>: This logs the dataset as an input artifact in MLflow. In later labs, we'll not sending the whole dataset to MLflow, but just the metadata (like the DVC hash) to keep our tracking efficient. However, for this lab, we log the dataset to demonstrate how you can capture the data lineage directly in MLflow.</li>
+</ul>
 </div>
 </div>
 </div>
