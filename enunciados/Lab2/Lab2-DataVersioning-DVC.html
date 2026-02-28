@@ -8287,7 +8287,7 @@ retry-requests<span class="o">==</span><span class="m">2</span>.0.0
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h3 id="7.-Lab-Checklist">7. Lab Checklist<a class="anchor-link" href="#7.-Lab-Checklist">¶</a></h3><ol>
 <li>Inspect <code>/tmp/dvc_remote</code>. Do you see hashed folders representing your data?</li>
-<li>Does the <code>lab2_dvc_integration.py</code> correctly extract the <code>md5</code> using <code>dvc.api.read</code>?</li>
+<li>Does the <code>lab2_dvc_integration.py</code> correctly extract the <code>md5</code>?</li>
 <li>In the MLflow UI, can you verify if dataset versioning is working? It should be available as a parameter in the run details (<code>dvc_data_hash</code>).<ul>
 <li>This hash is your "data fingerprint" for that specific run. If you ever need to reproduce this run, you can use this hash to revert your <code>data/raw</code> folder to the exact state it was in at the time of training, ensuring perfect reproducibility even as new data arrives.</li>
 </ul>
