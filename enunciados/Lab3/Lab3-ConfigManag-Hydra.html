@@ -3,7 +3,34 @@
 <html lang="en">
 <head><meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>M1-ClassAS3-ConfigManag-Hydra</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script>
+<title>Lab3-ConfigManag-Hydra</title><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.10/require.min.js"></script><script>
+(function() {
+  function addWidgetsRenderer() {
+    var mimeElement = document.querySelector('script[type="application/vnd.jupyter.widget-view+json"]');
+    var scriptElement = document.createElement('script');
+    
+    var widgetRendererSrc = 'https://unpkg.com/@jupyter-widgets/html-manager@*/dist/embed-amd.js';
+    
+    var widgetState;
+
+    // Fallback for older version:
+    try {
+      widgetState = mimeElement && JSON.parse(mimeElement.innerHTML);
+
+      if (widgetState && (widgetState.version_major < 2 || !widgetState.version_major)) {
+        
+        var widgetRendererSrc = 'https://unpkg.com/@jupyter-js-widgets@*/dist/embed.js';
+        
+      }
+    } catch(e) {}
+
+    scriptElement.src = widgetRendererSrc;
+    document.body.appendChild(scriptElement);
+  }
+
+  document.addEventListener('DOMContentLoaded', addWidgetsRenderer);
+}());
+</script>
 <style type="text/css">
     pre { line-height: 125%; }
 td.linenos .normal { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 5px; }
@@ -7804,7 +7831,7 @@ a.anchor-link {
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
 <h2 id="Lab-3:-Dynamic-Configuration-Management-with-Hydra">Lab 3: Dynamic Configuration Management with Hydra<a class="anchor-link" href="#Lab-3:-Dynamic-Configuration-Management-with-Hydra">¶</a></h2><ul>
 <li><strong>Course:</strong> Engineering of Intelligent Models</li>
-<li><strong>Module:</strong> M1 – MLOps Foundations</li>
+<li><strong>Module:</strong> M2. Design (Data &amp; Model Engineering)</li>
 <li><strong>Focus Tool:</strong> Hydra (by Meta)</li>
 <li><strong>Format:</strong> Hands-on Laboratory</li>
 <li><strong>Branch:</strong> <code>Lab3</code></li>
@@ -7842,7 +7869,7 @@ a.anchor-link {
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython2"><pre><span></span><span class="c1"># Create and switch to the Lab3 branch</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># Create and switch to the Lab3 branch</span>
 <span class="o">!</span>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>Lab3
 </pre></div>
 </div>
@@ -8028,7 +8055,7 @@ hydra-core<span class="o">==</span><span class="m">1</span>.3.2
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython2"><pre><span></span><span class="c1"># If you're running this in the professor's GitHub repository, make sure to navigate to the root of the project before executing this command.</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># If you're running this in the professor's GitHub repository, make sure to navigate to the root of the project before executing this command.</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
 <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="s2">"../../"</span><span class="p">)</span>  <span class="c1"># Adjust this path if your project is located elsewhere</span>
 </pre></div>
@@ -8044,7 +8071,7 @@ hydra-core<span class="o">==</span><span class="m">1</span>.3.2
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython2"><pre><span></span><span class="o">!</span>python<span class="w"> </span>src/ingestion/get_data.py
+<div class="highlight hl-ipython3"><pre><span></span><span class="o">!</span>python<span class="w"> </span>src/ingestion/get_data.py
 </pre></div>
 </div>
 </div>
@@ -8069,7 +8096,7 @@ hydra-core<span class="o">==</span><span class="m">1</span>.3.2
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython2"><pre><span></span><span class="o">!</span>python<span class="w"> </span>src/ingestion/get_data.py<span class="w"> </span>api.params.latitude<span class="o">=</span><span class="m">37</span>.0187<span class="w"> </span>api.params.longitude<span class="o">=</span>-7.9272
+<div class="highlight hl-ipython3"><pre><span></span><span class="o">!</span>python<span class="w"> </span>src/ingestion/get_data.py<span class="w"> </span>api.params.latitude<span class="o">=</span><span class="m">37</span>.0187<span class="w"> </span>api.params.longitude<span class="o">=</span>-7.9272
 </pre></div>
 </div>
 </div>
@@ -8230,7 +8257,7 @@ hydra-core<span class="o">==</span><span class="m">1</span>.3.2
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython2"><pre><span></span><span class="o">!</span>python<span class="w"> </span>src/training/lab3_hydra_integration.py<span class="w"> </span>tracking.experiment_name<span class="o">=</span><span class="s2">"Testing_Overrides_Dashboard"</span><span class="w"> </span>api.params.latitude<span class="o">=</span><span class="m">41</span>.1496
+<div class="highlight hl-ipython3"><pre><span></span><span class="o">!</span>python<span class="w"> </span>src/training/lab3_hydra_integration.py<span class="w"> </span>tracking.experiment_name<span class="o">=</span><span class="s2">"Testing_Overrides_Dashboard"</span><span class="w"> </span>api.params.latitude<span class="o">=</span><span class="m">41</span>.1496
 </pre></div>
 </div>
 </div>
@@ -8279,7 +8306,7 @@ hydra-core<span class="o">==</span><span class="m">1</span>.3.2
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div>
 <div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="cm-editor cm-s-jupyter">
-<div class="highlight hl-ipython2"><pre><span></span><span class="c1"># Run DVC add and commit the new data</span>
+<div class="highlight hl-ipython3"><pre><span></span><span class="c1"># Run DVC add and commit the new data</span>
 <span class="o">!</span>dvc<span class="w"> </span>add<span class="w"> </span>data/raw
 <span class="o">!</span>dvc<span class="w"> </span>commit<span class="w"> </span>-q
 <span class="o">!</span>dvc<span class="w"> </span>push
@@ -8291,4 +8318,7 @@ hydra-core<span class="o">==</span><span class="m">1</span>.3.2
 </div>
 </main>
 </body>
+<script type="application/vnd.jupyter.widget-state+json">
+{"state": {}, "version_major": 2, "version_minor": 0}
+</script>
 </html>
