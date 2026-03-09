@@ -8,6 +8,7 @@ services:
     environment:
       - MLFLOW_BACKEND_STORE_URI=sqlite:////mlflow/mlflow.db
       - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
+      - MLFLOW_SERVER_ALLOWED_HOSTS=mlflow_server:*,localhost:*,127.0.0.1:*
     volumes:
       - ./mlflow_data:/mlflow
     command: >
@@ -17,3 +18,106 @@ services:
         --artifacts-destination /mlflow/artifacts
         --serve-artifacts
         --host 0.0.0.0
+
+  postgres:
+    container_name: emi-postgres
+    image: postgres:18.3-alpine3.23
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - emi-postgres_data:/var/lib/postgresql/18.3/docker
+
+  airflow-init:
+    container_name: emi-airflow-init
+    build:
+      context: .
+      dockerfile: dags/Dockerfile
+    depends_on:
+      - postgres
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__API_AUTH__JWT_SECRET=super_secret_mlops_jwt_key
+      - AIRFLOW__API__SECRET_KEY=super_secret_mlops_api_key
+    command: airflow db migrate
+
+  airflow-webserver:
+    container_name: emi-airflow-webserver
+    build:
+      context: .
+      dockerfile: dags/Dockerfile
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS=True # Make all users admins for local development
+      - AIRFLOW__CORE__EXECUTION_API_SERVER_URL=http://airflow-webserver:8080/execution/
+      - AIRFLOW__API_AUTH__JWT_SECRET=super_secret_mlops_jwt_key
+      - AIRFLOW__API__SECRET_KEY=super_secret_mlops_api_key
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./conf:/opt/airflow/conf
+      - ./data:/opt/airflow/data
+      - ./.dvc:/opt/airflow/.dvc
+      - ./.git:/opt/airflow/.git
+    command: airflow api-server
+
+  airflow-scheduler:
+    container_name: emi-airflow-scheduler
+    build:
+      context: .
+      dockerfile: dags/Dockerfile
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__EXECUTION_API_SERVER_URL=http://airflow-webserver:8080/execution/
+      - AIRFLOW__API_AUTH__JWT_SECRET=super_secret_mlops_jwt_key
+      - AIRFLOW__API__SECRET_KEY=super_secret_mlops_api_key
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./conf:/opt/airflow/conf
+      - ./data:/opt/airflow/data
+      - ./.dvc:/opt/airflow/.dvc
+      - ./.git:/opt/airflow/.git
+    command: airflow scheduler
+
+  airflow-dag-processor:
+    container_name: emi-airflow-dag-processor
+    build:
+      context: .
+      dockerfile: dags/Dockerfile
+    depends_on:
+      postgres:
+        condition: service_started
+      airflow-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__API_AUTH__JWT_SECRET=super_secret_mlops_jwt_key
+      - AIRFLOW__API__SECRET_KEY=super_secret_mlops_api_key
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./src:/opt/airflow/src
+      - ./conf:/opt/airflow/conf
+      - ./data:/opt/airflow/data
+      - ./.dvc:/opt/airflow/.dvc
+      - ./.git:/opt/airflow/.git
+    command: airflow dag-processor
+
+volumes:
+  emi-postgres_data:
