@@ -1,11 +1,33 @@
 # Configuration for Open-Meteo API parameters
-params:
-  latitude: 38.801 # Porto, Portugal
-  longitude: -9.3783
+api:
+  endpoint: "https://archive-api.open-meteo.com/v1/archive"
+  timezone: "auto"
+
+# Predefined locations dictionary. Allows easy swapping via Hydra
+locations:
+  Sintra:
+    latitude: 38.801
+    longitude: -9.3783
+  Porto:
+    latitude: 41.1496
+    longitude: -8.6110
+  Lisbon:
+    latitude: 38.7167
+    longitude: -9.1333
+
+# Default location selected for ingestion
+target_location: "Sintra"
+
+# Data ranges
+date_range:
   start_date: "2026-02-06"
   end_date: "2026-02-20"
-  hourly:
-    - "temperature_2m"
-    - "relative_humidity_2m"
-    - "precipitation"
-  timezone: "auto"
+
+# Target variables as per Open-Meteo Historical API documentation
+variables:
+  - "temperature_2m"
+  - "relative_humidity_2m"
+  - "precipitation"
+
+output:
+  raw_data_path: "data/raw/historical_weather.csv"
