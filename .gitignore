@@ -179,4 +179,5 @@ cython_debug/
 # Weather Forecast Capston Project custom ignores
 mlflow_data
 outputs/
+data/raw
 

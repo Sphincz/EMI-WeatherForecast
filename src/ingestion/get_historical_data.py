@@ -79,16 +79,43 @@ def ingest_data(cfg: DictConfig) -> None:
     for idx, var_name in enumerate(variables):
         hourly_data[var_name] = hourly.Variables(idx).ValuesAsNumpy()
 
-    df = pd.DataFrame(data=hourly_data)
+    new_df = pd.DataFrame(data=hourly_data)
 
-    # Convert date to a more readable format for the CSV
-    df['date'] = df['date'].dt.strftime('%Y-%m-%d %H:%M:%S')
-
-    # 6. Ensure output directory exists and save
+    # 6. Incremental Loading & Deduplication
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    df.to_csv(output_path, index=False)
 
-    logger.info(f"Successfully ingested {len(df)} records.")
+    if os.path.exists(output_path):
+        logger.info(f"Existing dataset found at {output_path}. Appending new data...")
+        # Read existing data
+        existing_df = pd.read_csv(output_path)
+
+        # Convert date strings back to datetime objects for accurate comparison
+        existing_df['date'] = pd.to_datetime(existing_df['date'], utc=True)
+
+        # Concatenate old and new data
+        combined_df = pd.concat([existing_df, new_df], ignore_index=True)
+
+        # Drop duplicates based on exact date and location.
+        # keep='last' ensures that if we fetch newer data for the same date, it overwrites the old.
+        combined_df = combined_df.drop_duplicates(subset=['date', 'location'], keep='last')
+
+        # Sort chronologically
+        combined_df = combined_df.sort_values(by=['date']).reset_index(drop=True)
+
+        new_records_count = len(combined_df) - len(existing_df)
+        logger.info(f"Added {new_records_count} new unique records.")
+        final_df = combined_df
+    else:
+        logger.info(f"No existing dataset found. Creating new file at {output_path}.")
+        final_df = new_df
+
+    # Format the dates cleanly for the CSV
+    final_df['date'] = final_df['date'].dt.strftime('%Y-%m-%d %H:%M:%S')
+
+    # Save to CSV
+    final_df.to_csv(output_path, index=False)
+
+    logger.info(f"Successfully ingested {len(final_df)} records.")
     logger.info(f"Data saved to {output_path}")
     logger.info("--- Data Ingestion Complete ---")
 

@@ -20,7 +20,7 @@ target_location: "Sintra"
 
 # Data ranges
 date_range:
-  start_date: "2026-02-06"
+  start_date: "2026-02-01"
   end_date: "2026-02-20"
 
 # Target variables as per Open-Meteo Historical API documentation
@@ -29,5 +29,6 @@ variables:
   - "relative_humidity_2m"
   - "precipitation"
 
+# Output data folder
 output:
-  raw_data_path: "data/raw/historical_weather.csv"
+  raw_data_path: "data/raw/historical_weather-${api.target_location}.csv"
