@@ -33,18 +33,18 @@ with DAG(
     ingest_lisbon = BashOperator(
         task_id='ingest_weather_lisbon',
         bash_command='cd /opt/airflow && python src/ingestion/get_historical_data.py '
-                     'target_location="Lisbon" '
-                     'date_range.start_date="{{ params.start_date }}" '
-                     'date_range.end_date="{{ params.end_date }}"'
+                     'api.target_location="Lisbon" '
+                     'api.date_range.start_date="{{ params.start_date }}" '
+                     'api.date_range.end_date="{{ params.end_date }}"'
     )
 
     # Task 2: Ingest Data for Porto (Runs in parallel with Lisbon)
     ingest_porto = BashOperator(
         task_id='ingest_weather_porto',
         bash_command='cd /opt/airflow && python src/ingestion/get_historical_data.py '
-                     'target_location="Porto" '
-                     'date_range.start_date="{{ params.start_date }}" '
-                     'date_range.end_date="{{ params.end_date }}"'
+                     'api.target_location="Porto" '
+                     'api.date_range.start_date="{{ params.start_date }}" '
+                     'api.date_range.end_date="{{ params.end_date }}"'
     )
 
     # Task 3: Update DVC Tracking
