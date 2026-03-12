@@ -3,6 +3,7 @@ defaults:
   - paths: default
   - api: openmeteo
   - tracking: mlflow
+  - model: lstm
   - _self_
 
 project_name: "EMI-WeatherForecast"

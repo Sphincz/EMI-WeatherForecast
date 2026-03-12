@@ -3,6 +3,7 @@ services:
   mlflow_server:
     image: ghcr.io/mlflow/mlflow:latest
     container_name: emi-mlflow
+    restart: unless-stopped
     ports:
       - "5000:5000"
     environment:
