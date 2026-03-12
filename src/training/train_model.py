@@ -17,6 +17,9 @@ import logging
 import warnings
 import yaml
 
+from mlflow.prophet import log_model as log_prophet_model
+from mlflow.pytorch import log_model as log_pytorch_model
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,6 +57,9 @@ def train(cfg: DictConfig):
     data_path = "data/raw/historical_weather-Lisbon.csv"
     df = pd.read_csv(data_path)
 
+    # Reserve the last 720 rows (30 days) for the Evaluation script
+    train_df = df.iloc[:-720].reset_index(drop=True)
+
     # 2. Generate the dynamic run name with a timestamp
     current_time = datetime.now().strftime("%Y%m%d_%H%M%S")
     dynamic_run_name = f"{cfg.model.name}_Training_Run_{current_time}"
@@ -65,6 +71,8 @@ def train(cfg: DictConfig):
         # Log the DVC Data Hash for strict reproducibility
         data_hash = get_dvc_hash("data/raw.dvc")
         mlflow.log_param("data_dvc_hash", data_hash)
+        # Document the split
+        mlflow.log_param("test_set_reserved_hours", 720)
 
         if cfg.model.name in ["LSTM", "GRU"]:
             # Multivariate Forecasting
@@ -96,6 +104,13 @@ def train(cfg: DictConfig):
             )
             trainer.fit(model, dataloader)
 
+            # Grab one batch of data to serve as the input example (required due to export_model=True)
+            example_input, _ = next(iter(dataloader))
+            input_example = example_input.numpy()
+
+            # Save the PyTorch model artifact to MLflow
+            log_pytorch_model(model, name="model_artifact", export_model=True, code_paths=["src/training/models"], input_example=input_example)
+
         elif cfg.model.name == "Prophet":
             # Since Prophet is a univariate forecasting model, we'll focus only on temperature
             prophet_model = WeatherProphet(cfg.model)
@@ -112,6 +127,9 @@ def train(cfg: DictConfig):
 
             # 3. Explicitly log the metric to MLflow!
             mlflow.log_metric("train_loss", float(train_loss))
+
+            # Save the Prophet model artifact to MLflow
+            log_prophet_model(fitted_model, name="model_artifact")
             logger.info(f"Prophet fitting complete. Train Loss (MSE): {train_loss:.4f}")
 
     logger.info("--- Training Pipeline Complete ---")
