@@ -1,0 +1,5 @@
+fastapi[standard]==0.135.2
+mlflow==3.10.1
+torch==2.10.0
+numpy==2.4.3
+pandas==2.3.3

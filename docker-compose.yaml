@@ -120,5 +120,32 @@ services:
       - ./.git:/opt/airflow/.git
     command: airflow dag-processor
 
+  fastapi-service:
+    container_name: emi-fastapi
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    depends_on:
+      - mlflow_server
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow_server:5000
+    volumes:
+      - ./api/app:/code/app
+      - ./data:/code/data
+
+  evidently-ui:
+    container_name: emi-evidently
+    build:
+      context: .
+      dockerfile: evidently_ui/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./evidently_ui/workspace:/app/workspace
+
 volumes:
   emi-postgres_data:
